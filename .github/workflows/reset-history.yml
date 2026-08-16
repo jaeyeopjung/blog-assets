@@ -1,0 +1,30 @@
+name: reset-history
+
+# 7일마다 히스토리를 초기화한다.
+# 파일을 지워도 커밋 히스토리의 blob은 남으므로,
+# 현재 트리만 남긴 단일 커밋으로 main을 강제 재작성한다.
+
+on:
+  schedule:
+    - cron: '30 18 * * 0'     # 매주 일요일 03:30 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Squash history into a single commit
+        run: |
+          set -e
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan clean
+          git add -A
+          git commit -m "chore: reset history ($(date -u +%Y-%m-%d))"
+          git branch -M clean main
+          git push -f origin main
