@@ -1,0 +1,54 @@
+name: cleanup-old-files
+
+# 하루 지난 파일을 모두 삭제한다.
+# 네이버는 붙여넣는 순간 이미지를 자기 CDN(pstatic.net)으로 복사하므로
+# 발행이 끝난 원본은 지워도 글에 영향이 없다.
+#
+# 예외: .github/ 와 README.md
+#   워크플로 파일까지 지우면 자동화 자체가 사라지므로 제외한다.
+
+on:
+  schedule:
+    - cron: '0 18 * * *'      # 매일 03:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # 커밋 날짜를 봐야 하므로 전체 히스토리 필요
+
+      - name: Delete files older than 1 day
+        run: |
+          set -e
+          NOW=$(date +%s)
+          DELETED=0
+          # 체크아웃하면 파일 mtime이 초기화되므로 git 커밋 시각으로 나이를 잰다
+          git ls-files -z | while IFS= read -r -d '' f; do
+            case "$f" in
+              .github/*|README.md) continue ;;
+            esac
+            TS=$(git log -1 --format=%ct -- "$f")
+            [ -n "$TS" ] || continue
+            AGE=$(( (NOW - TS) / 86400 ))
+            if [ "$AGE" -ge 1 ]; then
+              echo "delete: $f (${AGE}d)"
+              git rm -q "$f"
+            fi
+          done
+
+      - name: Commit
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore: remove files older than 1 day"
+            git push
+          else
+            echo "삭제 대상 없음"
+          fi
