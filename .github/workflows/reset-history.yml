@@ -5,8 +5,8 @@ name: reset-history
 # 현재 트리만 남긴 단일 커밋으로 main을 강제 재작성한다.
 
 on:
-  schedule:
-    - cron: '30 18 * * 0'     # 매주 일요일 03:30 KST
+  # schedule:  # [일시 중지 2026-08-17] 히스토리 초기화도 함께 중단
+  #   - cron: "30 18 * * 0"
   workflow_dispatch:
 
 permissions:
